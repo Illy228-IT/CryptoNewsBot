@@ -1,129 +1,92 @@
-import cloudscraper
-from bs4 import BeautifulSoup
+import requests
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/136.0.0.0 Safari/537.36"
-    )
-}
+from config import NEWS_API_KEY
 
-URLS = [
-    "https://www.investing.com/news/cryptocurrency-news",
-    "https://www.investing.com/news/economic-indicators",
-    "https://www.investing.com/news/economy",
-    "https://www.investing.com/news/world-news"
+
+QUERIES = [
+    "Bitcoin OR Ethereum OR Crypto OR Cryptocurrency",
+    "Crypto market OR Bitcoin analysis OR Ethereum analysis",
+    "Economy OR Inflation OR Interest Rates OR Central Bank",
+    "GDP OR CPI OR PPI OR Unemployment OR Inflation Data",
+    "Geopolitics OR World News OR International Relations"
 ]
-
-scraper = cloudscraper.create_scraper(
-    browser={
-        "browser": "chrome",
-        "platform": "windows",
-        "mobile": False
-    }
-)
 
 
 def get_article_text(url):
-
-    try:
-
-        response = scraper.get(
-            url,
-            headers=HEADERS,
-            timeout=20
-        )
-
-        soup = BeautifulSoup(
-            response.text,
-            "lxml"
-        )
-
-        paragraphs = soup.find_all("p")
-
-        text = []
-
-        for p in paragraphs:
-
-            content = p.get_text(strip=True)
-
-            if len(content) > 40:
-                text.append(content)
-
-        return "\n".join(text[:30])
-
-    except Exception as e:
-
-        print("ARTICLE ERROR:", e)
-
-        return ""
-
-
-def parse_news_page(url):
-
-    result = []
-
-    try:
-
-        response = scraper.get(
-            url,
-            headers=HEADERS,
-            timeout=20
-        )
-
-        print("STATUS:", response.status_code)
-        print("URL:", response.url)
-
-        soup = BeautifulSoup(
-            response.text,
-            "lxml"
-        )
-
-        articles = soup.find_all("article")
-
-        print("ARTICLES FOUND:", len(articles))
-
-        for article in articles[:3]:
-
-            a = article.find("a")
-
-            if not a:
-                continue
-
-            title = a.get_text(strip=True)
-
-            link = a.get("href")
-
-            if not link:
-                continue
-
-            if not link.startswith("http"):
-                link = f"https://www.investing.com{link}"
-
-            result.append(
-                {
-                    "id": link,
-                    "title": title,
-                    "url": link
-                }
-            )
-
-    except Exception as e:
-
-        print("PARSER ERROR:", e)
-
-    return result
+    return url
 
 
 def get_latest_news():
 
     news = []
 
-    for url in URLS:
+    headers = {
+        "X-Api-Key": NEWS_API_KEY
+    }
 
-        page_news = parse_news_page(url)
+    for query in QUERIES:
 
-        news.extend(page_news)
+        try:
 
-    return news
+            response = requests.get(
+                "https://newsapi.org/v2/everything",
+                params={
+                    "q": query,
+                    "language": "en",
+                    "sortBy": "publishedAt",
+                    "pageSize": 5
+                },
+                headers=headers,
+                timeout=20
+            )
+
+            data = response.json()
+
+            if data.get("status") != "ok":
+                print(data)
+                continue
+
+            for article in data["articles"]:
+
+                title = article.get("title")
+
+                url = article.get("url")
+
+                description = article.get("description", "")
+
+                if not title or not url:
+                    continue
+
+                news.append(
+                    {
+                        "id": url,
+                        "title": title,
+                        "url": url,
+                        "description": description
+                    }
+                )
+
+        except Exception as e:
+
+            print("NEWS API ERROR:", e)
+
+    unique_news = []
+
+    seen = set()
+
+    for item in news:
+
+        if item["id"] in seen:
+            continue
+
+        seen.add(item["id"])
+
+        unique_news.append(item)
+
+    print(f"Found news: {len(unique_news)}")
+
+    return unique_news
+
+
+def get_article_text(url):
+    return url
