@@ -2,10 +2,7 @@ import asyncio
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from parser.investing_parser import (
-    get_latest_news,
-    get_article_text
-)
+from parser.investing_parser import get_latest_news
 
 from ai.post_generator import generate_post
 from ai.news_filter import check_news_relevance
@@ -46,13 +43,13 @@ async def process_news():
 
             print(f"\nProcessing: {news['title']}")
 
-            article_text = get_article_text(
-                news["url"]
+            article_text = news.get(
+                "description",
+                ""
             )
 
             if not article_text:
-                print("Article text not found")
-                continue
+                article_text = news["title"]
 
             check = check_news_relevance(
                 news["title"],
