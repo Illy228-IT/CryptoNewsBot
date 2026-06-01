@@ -75,6 +75,11 @@ async def process_news():
                 article_text
             )
 
+            post += (
+                f'\n\n🌐 <a href="{news["url"]}">'
+                f'Источник</a>'
+            )
+
             await publish_post(post)
 
             mark_posted(news["id"])
