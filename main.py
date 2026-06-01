@@ -1,7 +1,7 @@
 import asyncio
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from utils.storage import initialize_news
+
 from parser.investing_parser import (
     get_latest_news,
     get_article_text
@@ -14,7 +14,8 @@ from tg.publisher import publish_post
 
 from utils.storage import (
     is_posted,
-    mark_posted
+    mark_posted,
+    initialize_news
 )
 
 MAX_POSTS_PER_RUN = 3
@@ -25,6 +26,7 @@ async def process_news():
     print("\n========== CHECKING NEWS ==========\n")
 
     news_list = get_latest_news()
+
     initialize_news(news_list)
 
     print(f"Found news: {len(news_list)}")
@@ -83,7 +85,8 @@ async def process_news():
             posted_count += 1
 
             print(
-                f"SUCCESSFULLY POSTED ({posted_count}/{MAX_POSTS_PER_RUN})"
+                f"SUCCESSFULLY POSTED "
+                f"({posted_count}/{MAX_POSTS_PER_RUN})"
             )
 
             await asyncio.sleep(120)
@@ -99,6 +102,7 @@ async def process_news():
 
 
 async def main():
+
     print("BOT STARTED")
 
     news_list = get_latest_news()
@@ -106,8 +110,8 @@ async def main():
     print(f"Found news: {len(news_list)}")
 
     for news in news_list:
-    print(news["title"])
-  
+        print(news["title"])
+
     scheduler = AsyncIOScheduler()
 
     scheduler.add_job(
