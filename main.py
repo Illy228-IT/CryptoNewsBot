@@ -99,9 +99,15 @@ async def process_news():
 
 
 async def main():
-
     print("BOT STARTED")
 
+    news_list = get_latest_news()
+
+    print(f"Found news: {len(news_list)}")
+
+    for news in news_list:
+    print(news["title"])
+  
     scheduler = AsyncIOScheduler()
 
     scheduler.add_job(
