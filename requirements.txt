@@ -6,3 +6,4 @@ apscheduler
 lxml
 cloudscraper
 telethon
+python-telegram-bot==22.1
