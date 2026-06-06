@@ -3,9 +3,9 @@ import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from parser.investing_parser import get_latest_news
-
-from ai.post_generator import generate_post
+from news_filter import cheap_crypto_filter
 from ai.news_filter import check_news_relevance
+from ai.post_generator import generate_post
 
 from tg.publisher import publish_post
 
@@ -16,6 +16,7 @@ from utils.storage import (
 )
 
 MAX_POSTS_PER_RUN = 3
+MAX_AI_CHECKS_PER_RUN = 5
 
 
 async def process_news():
@@ -29,6 +30,7 @@ async def process_news():
     print(f"Found news: {len(news_list)}")
 
     posted_count = 0
+    ai_checks = 0
 
     for news in news_list:
 
@@ -36,28 +38,38 @@ async def process_news():
             print("Post limit reached")
             break
 
+        if ai_checks >= MAX_AI_CHECKS_PER_RUN:
+            print("AI check limit reached")
+            break
+
         try:
 
             if is_posted(news["id"]):
                 continue
 
-            print(f"\nProcessing: {news['title']}")
-
-            article_text = news.get(
-                "description",
-                ""
-            )
+            title = news.get("title", "")
+            article_text = news.get("description", "")
 
             if not article_text:
-                article_text = news["title"]
+                article_text = title
+
+            print(f"\nProcessing: {title}")
+
+            # 1. Дешёвый фильтр без OpenAI
+            if not cheap_crypto_filter(title, article_text):
+                print("Skipped by cheap filter")
+                continue
+
+            # 2. Только после дешёвого фильтра вызываем OpenAI
+            ai_checks += 1
 
             check = check_news_relevance(
-                news["title"],
+                title,
                 article_text
             )
 
             print(
-                f"Filter result: "
+                f"AI filter result: "
                 f"approved={check['approved']} "
                 f"score={check['score']}"
             )
@@ -71,7 +83,7 @@ async def process_news():
                 continue
 
             post = generate_post(
-                news["title"],
+                title,
                 article_text
             )
 
@@ -97,7 +109,7 @@ async def process_news():
 
             print(
                 f"ERROR WHILE PROCESSING "
-                f"{news['title']}"
+                f"{news.get('title', 'NO TITLE')}"
             )
 
             print(e)
